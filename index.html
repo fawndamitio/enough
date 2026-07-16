@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Enough</title>
+<meta name="description" content="A calm, glanceable way to notice your daily capacity — one bean at a time.">
+<meta name="theme-color" content="#6E8163">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Enough">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+
+    --paper: #F1F3EC;
+    --stage-a: #E5E9DE;
+    --stage-b: #D8DECD;
+    --ink: #34382D;
+    --ink-soft: #6C7263;
+    --ink-faint: #9BA08F;
+    --line: rgba(52, 56, 45, 0.12);
+    --ceramic-back: #E1E4D8;
+    --ceramic-front: #CDD2C2;
+
+    --state: #6E8163;
+    --wash: #F1F3EC;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  .stage {
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: radial-gradient(120% 90% at 50% 0%, var(--stage-a), var(--stage-b));
+    font-family: var(--sans);
+    color: var(--ink);
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 440px;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--wash);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    transition: background 900ms ease;
+  }
+
+  @media (min-width: 480px) {
+    .stage { padding: 30px 16px 40px; }
+    .phone {
+      max-width: 392px;
+      height: min(816px, 92vh);
+      border-radius: 40px;
+      border: 1px solid rgba(52, 56, 45, 0.08);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.6) inset,
+        0 30px 60px -28px rgba(40, 46, 32, 0.45),
+        0 8px 20px -12px rgba(40, 46, 32, 0.3);
+    }
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: max(22px, env(safe-area-inset-top)) 26px 10px;
+    flex: none;
+  }
+  .brand { display: flex; flex-direction: column; line-height: 1; }
+  .brand b { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 25px; letter-spacing: 0.2px; color: var(--ink); }
+  .brand small { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); margin-top: 5px; }
+  .sound {
+    border: 1px solid var(--line); background: rgba(255, 255, 255, 0.5); color: var(--ink-soft);
+    width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+    font-size: 15px; transition: color 200ms, border-color 200ms, background 200ms;
+  }
+  .sound[aria-pressed="true"] { color: var(--state); border-color: var(--state); background: rgba(255,255,255,0.85); }
+
+  .tabs { display: flex; gap: 26px; padding: 0 28px; border-bottom: 1px solid var(--line); flex: none; }
+  .tab {
+    appearance: none; background: none; border: none; padding: 6px 0 12px;
+    font-family: var(--sans); font-size: 13px; letter-spacing: 0.02em; color: var(--ink-faint);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color 200ms, border-color 200ms;
+  }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--state); }
+
+  .scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+  .view { padding: 8px 26px calc(34px + env(safe-area-inset-bottom)); }
+  .view[hidden] { display: none; }
+
+  .bowl-wrap { position: relative; text-align: center; padding: 6px 0 2px; }
+  .bowl { width: 100%; max-width: 320px; height: auto; display: block; margin: 0 auto; }
+  .bean-body { transition: fill 800ms ease, opacity 600ms ease; }
+  .bean-belly { transition: opacity 600ms ease; }
+
+  .count { margin-top: 2px; display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+  .count b { font-family: var(--serif); font-weight: 400; font-size: 58px; line-height: 1; color: var(--state); font-variant-numeric: tabular-nums; transition: color 800ms ease; }
+  .count span { font-size: 14px; color: var(--ink-faint); letter-spacing: 0.04em; }
+  .felt { font-family: var(--serif); font-size: 17px; color: var(--ink); text-align: center; margin: 10px auto 0; max-width: 30ch; text-wrap: balance; min-height: 1.4em; transition: color 400ms ease; }
+
+  .control { margin-top: 26px; }
+  .control > .q { font-size: 14.5px; color: var(--ink); text-align: center; font-weight: 550; }
+  .control > .hint { font-size: 12.5px; color: var(--ink-soft); text-align: center; margin-top: 5px; text-wrap: balance; line-height: 1.5; }
+  .slider-row { padding: 20px 4px 4px; }
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 26px; background: transparent; cursor: pointer; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--state) var(--fill, 100%), rgba(52,56,45,0.12) var(--fill, 100%)); }
+  input[type="range"]::-moz-range-track { height: 8px; border-radius: 999px; background: rgba(52,56,45,0.12); }
+  input[type="range"]::-moz-range-progress { height: 8px; border-radius: 999px; background: var(--state); }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -9px; border-radius: 50%; background: #fbfcf8; border: 3px solid var(--state); box-shadow: 0 2px 6px -1px rgba(40,46,32,0.35); transition: border-color 400ms ease; }
+  input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #fbfcf8; border: 3px solid var(--state); box-shadow: 0 2px 6px -1px rgba(40,46,32,0.35); }
+  input[type="range"]:focus-visible { outline: none; }
+  input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(110,129,99,0.3); }
+  .scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-faint); padding: 4px 2px 0; letter-spacing: 0.03em; }
+
+  .low { margin-top: 26px; border-radius: 20px; padding: 22px 22px 20px; background: rgba(169, 78, 56, 0.07); border: 1px solid rgba(169, 78, 56, 0.18); }
+  .low[hidden] { display: none; }
+  .low h3 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 21px; color: #8f3f2c; }
+  .low p { margin: 10px 0 0; font-size: 13.5px; line-height: 1.6; color: var(--ink); }
+  .epigraph { font-family: var(--serif); font-style: italic; font-size: 18px; color: #8f3f2c; text-align: center; margin: 18px 0 4px; text-wrap: balance; }
+  .epigraph + .cite { display: block; text-align: center; font-size: 11px; color: var(--ink-faint); letter-spacing: 0.06em; margin-bottom: 4px; }
+  .bell { margin: 16px auto 0; display: block; background: rgba(255,255,255,0.7); border: 1px solid rgba(169,78,56,0.3); color: #8f3f2c; font-family: var(--sans); font-size: 13px; padding: 11px 20px; border-radius: 999px; cursor: pointer; transition: background 200ms; }
+  .bell:hover { background: #fff; }
+
+  .presets { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .presets summary { list-style: none; cursor: pointer; padding: 12px 2px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: var(--ink); font-weight: 550; }
+  .presets summary::-webkit-details-marker { display: none; }
+  .presets summary .opt { font-weight: 400; font-size: 11px; color: var(--ink-faint); letter-spacing: 0.1em; text-transform: uppercase; }
+  .presets summary .chev { color: var(--ink-faint); transition: transform 300ms ease; font-size: 12px; }
+  .presets[open] summary .chev { transform: rotate(180deg); }
+  .presets .note { font-size: 12px; color: var(--ink-soft); line-height: 1.55; margin: 0 2px 14px; text-wrap: balance; }
+  .grp { margin-bottom: 16px; }
+  .grp h4 { margin: 0 2px 9px; font-size: 10.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip { border: 1px solid var(--line); background: rgba(255,255,255,0.55); color: var(--ink); font-family: var(--sans); font-size: 12.5px; line-height: 1.2; padding: 8px 12px; border-radius: 999px; cursor: pointer; text-align: left; transition: background 160ms, border-color 160ms, transform 120ms; }
+  .chip:hover { background: #fff; }
+  .chip:active { transform: scale(0.96); }
+  .chip.drain:hover { border-color: rgba(169,78,56,0.4); }
+  .chip.restock:hover { border-color: rgba(110,129,99,0.5); }
+  .chip.on { font-weight: 550; }
+  .chip.drain.on { background: rgba(169,78,56,0.14); border-color: rgba(169,78,56,0.5); color: #8f3f2c; }
+  .chip.restock.on { background: rgba(110,129,99,0.17); border-color: rgba(110,129,99,0.6); color: #4d5b40; }
+  .journal { width: 100%; min-height: 92px; resize: vertical; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,0.6); padding: 13px 15px; font-family: var(--serif); font-size: 15px; line-height: 1.6; color: var(--ink); margin: 4px 0 2px; display: block; }
+  .journal::placeholder { color: var(--ink-faint); font-style: italic; }
+  .journal:focus-visible { outline: none; border-color: var(--state); box-shadow: 0 0 0 3px rgba(110,129,99,0.18); }
+  .or-tap { font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); text-align: center; margin: 16px 0 14px; display: flex; align-items: center; gap: 12px; }
+  .or-tap::before, .or-tap::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .reflect { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 20px; }
+  .reflect-title { font-family: var(--serif); font-weight: 500; font-size: 19px; margin: 0; color: var(--ink); text-wrap: balance; transition: color 300ms ease; }
+  .reflect-sub { font-size: 12.5px; color: var(--ink-soft); line-height: 1.55; margin: 6px 0 14px; text-wrap: balance; }
+  .grp[hidden], .suggest[hidden] { display: none; }
+  .suggest { margin-top: 4px; background: rgba(110,129,99,0.09); border: 1px solid rgba(110,129,99,0.22); border-radius: 16px; padding: 15px 16px; }
+  .suggest h4 { margin: 0 0 8px; color: #4d5b40; }
+  .suggest-lead { font-size: 12.5px; color: #4d5b40; line-height: 1.55; margin: 0 0 12px; }
+  .suggest-chip { display: inline-block; border: 1px solid rgba(110,129,99,0.4); background: rgba(255,255,255,0.65); color: #4d5b40; font-family: var(--sans); font-size: 12.5px; line-height: 1.2; padding: 8px 12px; border-radius: 999px; }
+  .suggest-note { font-size: 11.5px; color: var(--ink-faint); margin: 11px 2px 0; line-height: 1.5; }
+
+  .chip.toggle[aria-pressed="true"] { background: var(--state); border-color: var(--state); color: #fbfcf8; }
+  .chime-toggle { display: flex; align-items: center; justify-content: space-between; margin: 8px 2px 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,0.45); }
+  .chime-toggle .tl { font-size: 13px; color: var(--ink); }
+  .chime-toggle .tl small { display: block; font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; }
+  .switch { position: relative; width: 46px; height: 27px; border-radius: 999px; flex: none; border: 1px solid var(--line); background: rgba(52,56,45,0.14); cursor: pointer; transition: background 220ms; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 21px; height: 21px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: left 220ms; }
+  .switch[aria-pressed="true"] { background: var(--state); }
+  .switch[aria-pressed="true"]::after { left: 21px; }
+  .preview-lock { margin: 16px 0 0; width: 100%; background: rgba(255,255,255,0.55); border: 1px solid var(--line); color: var(--ink); font-family: var(--sans); font-size: 13.5px; padding: 13px; border-radius: 14px; cursor: pointer; transition: background 180ms, border-color 180ms; }
+  .preview-lock:hover { background: #fff; border-color: var(--state); }
+
+  .lockscreen { position: absolute; inset: 0; z-index: 25; background: radial-gradient(120% 80% at 50% 12%, #6f6650, #3a4234 55%, #2a3125 100%); display: flex; flex-direction: column; align-items: center; padding: max(30px, env(safe-area-inset-top)) 22px 22px; color: #f3f2ea; }
+  .lockscreen[hidden] { display: none; }
+  .ls-close { align-self: flex-end; background: rgba(255,255,255,0.16); border: none; color: #f3f2ea; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 15px; }
+  .ls-clock { text-align: center; margin-top: 6px; }
+  .ls-clock .time { font-family: var(--serif); font-weight: 400; font-size: 60px; line-height: 1; letter-spacing: 1px; }
+  .ls-clock .date { font-size: 13px; opacity: 0.85; margin-top: 6px; letter-spacing: 0.03em; }
+  .ls-widget { margin-top: 30px; width: 100%; background: rgba(18,22,14,0.36); border: 1px solid rgba(255,255,255,0.16); border-radius: 22px; padding: 16px; display: flex; gap: 14px; align-items: center; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: box-shadow 500ms ease, border-color 500ms ease; }
+  .ls-widget.due { border-color: var(--state); box-shadow: 0 0 0 3px rgba(255,255,255,0.06), 0 0 24px -3px var(--state); }
+  .ls-bowl { width: 90px; height: auto; flex: none; }
+  .ls-info { flex: 1; min-width: 0; }
+  .ls-info .n { font-family: var(--serif); font-size: 30px; line-height: 1; color: #fff; }
+  .ls-info .n b { font-weight: 400; }
+  .ls-info .n .lbl { font-size: 13px; opacity: 0.8; margin-left: 5px; font-family: var(--sans); }
+  .ls-info .ph { font-size: 12px; opacity: 0.85; margin-top: 6px; line-height: 1.45; }
+  .ls-info .due-line { font-size: 12px; margin-top: 8px; color: #fff; opacity: 0; height: 0; overflow: hidden; transition: opacity 400ms; }
+  .ls-widget.due .ls-info .due-line { opacity: 1; height: auto; }
+  .ls-adjust { display: flex; gap: 8px; margin-top: 11px; }
+  .ls-adjust button { flex: 1; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22); color: #fff; font-size: 17px; border-radius: 10px; padding: 5px 0; cursor: pointer; font-family: var(--sans); transition: background 160ms; }
+  .ls-adjust button:hover { background: rgba(255,255,255,0.28); }
+  .ls-hint { font-size: 11.5px; opacity: 0.75; text-align: center; margin-top: 16px; line-height: 1.5; text-wrap: balance; }
+  .ls-sim { margin-top: auto; display: flex; justify-content: center; }
+  .ls-sim button { background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.24); color: #f3f2ea; border-radius: 999px; padding: 8px 16px; cursor: pointer; font-size: 12px; font-family: var(--sans); }
+  .ls-sim button:hover { background: rgba(255,255,255,0.26); }
+
+  .p-lead { font-family: var(--serif); font-size: 21px; margin: 8px 0 2px; font-weight: 500; }
+  .p-sub { font-size: 13px; color: var(--ink-soft); margin: 0 0 20px; line-height: 1.55; }
+  .weekchart { width: 100%; height: auto; display: block; margin: 4px 0 6px; }
+  .daylabels { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-faint); padding: 0 2px; letter-spacing: 0.04em; }
+  .daylabels span { flex: 1; text-align: center; }
+  .notice { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
+  .notice .card { border: 1px solid var(--line); background: rgba(255,255,255,0.45); border-radius: 16px; padding: 16px 17px; }
+  .notice .card b { display: block; font-family: var(--serif); font-size: 15px; font-weight: 500; margin-bottom: 6px; color: var(--ink); }
+  .notice .card p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink-soft); }
+  .p-empty { text-align: center; padding: 30px 10px; }
+  .p-empty .em { font-family: var(--serif); font-size: 17px; color: var(--ink); margin-bottom: 8px; text-wrap: balance; }
+  .p-empty p { font-size: 13px; color: var(--ink-soft); line-height: 1.6; margin: 0; text-wrap: balance; }
+  .p-foot { margin-top: 22px; font-size: 11.5px; color: var(--ink-faint); text-align: center; line-height: 1.5; text-wrap: balance; }
+
+  .welcome { position: absolute; inset: 0; z-index: 22; background: radial-gradient(130% 100% at 50% 0%, #EEF1E7, #E4E9DB); display: flex; flex-direction: column; justify-content: center; padding: 44px 34px; transition: opacity 500ms ease; overflow-y: auto; }
+  .welcome[hidden] { display: none; }
+  .welcome .eyebrow { font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--ink-soft); }
+  .welcome h2 { font-family: var(--serif); font-weight: 500; font-size: 30px; line-height: 1.15; margin: 10px 0 0; color: var(--ink); text-wrap: balance; }
+  .welcome p { font-size: 14.5px; color: var(--ink-soft); line-height: 1.65; margin: 16px 0 0; text-wrap: balance; }
+  .welcome p em { font-style: italic; color: var(--ink); }
+  .welcome .priv { font-size: 12.5px; color: var(--ink-faint); margin-top: 18px; line-height: 1.55; }
+  .welcome .begin { margin-top: 28px; align-self: flex-start; background: var(--state); color: #fff; border: none; border-radius: 999px; padding: 14px 32px; font-family: var(--sans); font-size: 15px; cursor: pointer; transition: transform 120ms, filter 160ms; }
+  .welcome .begin:hover { filter: brightness(1.06); }
+  .welcome .begin:active { transform: scale(0.98); }
+
+  .checkin { position: absolute; inset: 0; background: radial-gradient(130% 100% at 50% 0%, #EEF1E7, #E4E9DB); z-index: 20; display: flex; flex-direction: column; justify-content: center; padding: 40px 34px; transition: opacity 600ms ease; }
+  .checkin[hidden] { display: none; }
+  .checkin .eyebrow { font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--ink-soft); }
+  .checkin h2 { font-family: var(--serif); font-weight: 500; font-size: 34px; margin: 8px 0 0; color: var(--ink); }
+  .checkin .ask { font-size: 14.5px; color: var(--ink-soft); margin: 12px 0 26px; line-height: 1.6; text-wrap: balance; }
+  .opts { display: flex; flex-direction: column; gap: 10px; }
+  .opt-btn { text-align: left; background: rgba(255,255,255,0.72); border: 1px solid var(--line); border-radius: 15px; padding: 15px 18px; cursor: pointer; font-family: var(--sans); display: flex; align-items: center; justify-content: space-between; transition: background 180ms, border-color 180ms, transform 120ms; }
+  .opt-btn:hover { background: #fff; border-color: rgba(110,129,99,0.45); }
+  .opt-btn:active { transform: scale(0.99); }
+  .opt-btn .lbl { font-size: 15px; color: var(--ink); }
+  .opt-btn .dots { display: flex; gap: 4px; }
+  .opt-btn .dots i { width: 7px; height: 7px; border-radius: 50%; background: #6E8163; display: block; }
+  .opt-btn .dots i.off { background: rgba(52,56,45,0.14); }
+  .checkin .fine { font-size: 11.5px; color: var(--ink-faint); margin-top: 24px; line-height: 1.5; text-align: center; text-wrap: balance; }
+
+  .toast { position: absolute; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translate(-50%, 12px); background: var(--ink); color: #F1F3EC; font-size: 12.5px; padding: 11px 18px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity 320ms ease, transform 320ms ease; z-index: 15; max-width: 80%; text-align: center; box-shadow: 0 8px 24px -10px rgba(0,0,0,0.4); }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: 0.01ms !important; } }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone" id="phone">
+
+    <div class="welcome" id="welcome" hidden>
+      <div class="eyebrow">enough</div>
+       <h2>You have about ten beans a day.</h2>
+      <p>Everyday stressors spend them.</p>
+      <p>The key is to notice when they run low and replenish them early — so you can care for yourself the way you care for everyone else.</p>
+      <p>Start today.</p>
+      <button class="begin" id="beginBtn" type="button">Begin</button>
+    </div>
+
+    <div class="checkin" id="checkin" hidden>
+      <div class="eyebrow">enough</div>
+      <h2 id="ciGreeting">Good&nbsp;morning.</h2>
+      <p class="ask" id="ciAsk">Before the day asks anything of you — how rested do you feel?</p>
+      <div class="opts" id="opts">
+        <button class="opt-btn" data-beans="10" data-fatigue="rested and clear">
+          <span class="lbl">Rested and clear</span>
+          <span class="dots"><i></i><i></i><i></i><i></i><i></i></span>
+        </button>
+        <button class="opt-btn" data-beans="8" data-fatigue="okay">
+          <span class="lbl">Okay — decent enough</span>
+          <span class="dots"><i></i><i></i><i></i><i></i><i class="off"></i></span>
+        </button>
+        <button class="opt-btn" data-beans="6" data-fatigue="tired">
+          <span class="lbl">Tired. A rough night.</span>
+          <span class="dots"><i></i><i></i><i></i><i class="off"></i><i class="off"></i></span>
+        </button>
+        <button class="opt-btn" data-beans="4" data-fatigue="empty">
+          <span class="lbl">Running on empty</span>
+          <span class="dots"><i></i><i></i><i class="off"></i><i class="off"></i><i class="off"></i></span>
+        </button>
+      </div>
+      <p class="fine">This sets where your beans begin today. A full day is ten — never more. Tomorrow brings a fresh start.</p>
+    </div>
+
+    <div class="bar">
+      <div class="brand">
+        <b>enough</b>
+        <small>you are already enough</small>
+      </div>
+      <button class="sound" id="soundBtn" aria-pressed="false" aria-label="Soft chime: off" title="Soft chime">◠</button>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tab-today" role="tab" aria-selected="true">Today</button>
+      <button class="tab" id="tab-patterns" role="tab" aria-selected="false">Patterns</button>
+    </div>
+
+    <div class="scroll">
+      <section class="view" id="view-today" role="tabpanel">
+        <div class="bowl-wrap">
+          <svg class="bowl" viewBox="0 0 330 232" role="img" aria-labelledby="bowlTitle">
+            <title id="bowlTitle">A bowl of beans showing how much you have left today</title>
+            <ellipse cx="165" cy="150" rx="120" ry="22" fill="var(--ceramic-back)"/>
+            <g id="beans"></g>
+            <path d="M45,150 C45,150 92,172 165,172 C238,172 285,150 285,150 Q165,268 45,150 Z" fill="var(--ceramic-front)"/>
+            <path d="M45,150 C45,150 92,172 165,172 C238,172 285,150 285,150" fill="none" stroke="rgba(52,56,45,0.10)" stroke-width="1.5"/>
+          </svg>
+          <div class="count">
+            <b id="countNum">10</b>
+            <span id="countWord">beans of ten</span>
+          </div>
+          <p class="felt" id="felt">Full. You have plenty of yourself today.</p>
+        </div>
+
+        <div class="control">
+          <div class="q">How many beans do you have right now?</div>
+          <div class="hint">Drag to where you actually are — by how you feel, not what you think you should feel.</div>
+          <div class="slider-row">
+            <input type="range" id="slider" min="0" max="10" step="1" value="10" aria-label="How many beans do you have right now, from zero to ten" />
+            <div class="scale"><span>empty</span><span>full</span></div>
+          </div>
+        </div>
+
+        <div class="low" id="low" hidden>
+          <h3>Running low.</h3>
+          <p>Nothing here needs fixing. This is just your body, letting you know.</p>
+          <p>When we're ragged, we reach for whatever soothes fastest — not always what fills us. So before the next thing:</p>
+          <div class="epigraph">"Don't just do something. Sit there."</div>
+          <span class="cite">— a sentiment borrowed from Osho</span>
+          <p>Sit for a moment. Breathe. Your body already knows more than your thinking brain does. What do you actually need?</p>
+          <button class="bell" id="bellBtn">Ring a soft bell</button>
+        </div>
+
+        <div class="reflect" id="reflect">
+          <h3 class="reflect-title" id="reflectTitle">How is your day?</h3>
+          <p class="reflect-sub" id="reflectSub">Anything you'd like to notice? None of this moves your beans — it's just for you.</p>
+          <textarea class="journal" id="journal" aria-label="Journal" placeholder="In your own words — what's shifting your beans today? Write as much or as little as you like. Or nothing at all."></textarea>
+          <div class="grp" id="grpDrains" hidden>
+            <h4>What drew from you — tap any that fit</h4>
+            <div class="chips" id="drains"></div>
+          </div>
+          <div class="grp" id="grpRestocks" hidden>
+            <h4>What filled you back — tap any that fit</h4>
+            <div class="chips" id="restocks"></div>
+          </div>
+          <div class="suggest" id="suggest" hidden>
+            <h4 id="suggestTitle">It may be time to recharge.</h4>
+            <p class="suggest-lead" id="suggestLead">Do one small thing that fills you back up.</p>
+            <div class="chips" id="suggestChips"></div>
+            <p class="suggest-note">Only if you want to — small things count. No pressure to do any of them.</p>
+          </div>
+        </div>
+
+        <details class="presets sched">
+          <summary>Check-in schedule <span class="opt">optional <span class="chev">▾</span></span></summary>
+          <p class="note">At each moment you choose, the bowl on your lock screen quietly opens for a check-in — you'll notice it next time you glance. No buzzing. Add a soft chime only if you'd like a little more pull.</p>
+          <div class="grp">
+            <h4>Tie check-ins to your day</h4>
+            <div class="chips" id="anchors"></div>
+          </div>
+          <div class="chime-toggle">
+            <div class="tl">Soft chime at check-ins<small>A gentle bell, never a buzz. Off by default.</small></div>
+            <button class="switch" id="schedChime" type="button" aria-pressed="false" aria-label="Soft chime at check-ins"></button>
+          </div>
+        </details>
+
+        <button class="preview-lock" id="previewLock">See it on your lock screen →</button>
+
+        <button class="preview-lock" id="newDay" style="margin-top:10px;border:none;background:none;color:var(--ink-faint);text-decoration:underline;text-underline-offset:3px;font-size:12px;">Redo today's check-in</button>
+      </section>
+
+      <section class="view" id="view-patterns" role="tabpanel" hidden>
+        <h2 class="p-lead">A gentle look back</h2>
+        <p class="p-sub">Not a report card. Just what your week has quietly been telling you.</p>
+        <div id="p-body"></div>
+      </section>
+    </div>
+
+    <div class="lockscreen" id="lockscreen" hidden>
+      <button class="ls-close" id="lsClose" aria-label="Close lock screen preview">✕</button>
+      <div class="ls-clock">
+        <div class="time" id="lsTime">7:12</div>
+        <div class="date" id="lsDate">Today</div>
+      </div>
+      <div class="ls-widget" id="lsWidget">
+        <svg class="ls-bowl" viewBox="0 0 330 232" aria-hidden="true">
+          <ellipse cx="165" cy="150" rx="120" ry="22" fill="rgba(255,255,255,0.13)"/>
+          <g id="beans2"></g>
+          <path d="M45,150 C45,150 92,172 165,172 C238,172 285,150 285,150 Q165,268 45,150 Z" fill="rgba(255,255,255,0.10)"/>
+        </svg>
+        <div class="ls-info">
+          <div class="n"><b id="lsNum">10</b><span class="lbl">beans</span></div>
+          <div class="ph" id="lsPhrase">Full. Plenty of yourself today.</div>
+          <div class="due-line">A good moment to check in.</div>
+          <div class="ls-adjust">
+            <button id="lsMinus" aria-label="One bean fewer">–</button>
+            <button id="lsPlus" aria-label="One bean more">+</button>
+          </div>
+        </div>
+      </div>
+      <p class="ls-hint">On iOS 17+, those –/+ buttons work right here — you can tend your beans without ever opening the app.</p>
+      <div class="ls-sim">
+        <button id="lsDue">Simulate: a scheduled check-in is due</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var POS = [
+    {x:108,y:150,r:-11},{x:146,y:150,r:7},{x:184,y:150,r:-5},{x:222,y:150,r:12},
+    {x:127,y:129,r:-8},{x:165,y:129,r:6},{x:203,y:129,r:10},
+    {x:146,y:109,r:-6},{x:184,y:109,r:9},
+    {x:165,y:90,r:0}
+  ];
+  var STOPS = [ [0,[169,78,56]], [3,[180,105,59]], [5,[193,145,63]], [7,[142,139,82]], [10,[110,129,99]] ];
+  function lerp(a,b,t){ return Math.round(a+(b-a)*t); }
+  function stateColor(level){
+    level = Math.max(0, Math.min(10, level));
+    for (var i=0;i<STOPS.length-1;i++){
+      var lo=STOPS[i], hi=STOPS[i+1];
+      if (level<=hi[0]){ var t=(level-lo[0])/(hi[0]-lo[0]); return [lerp(lo[1][0],hi[1][0],t),lerp(lo[1][1],hi[1][1],t),lerp(lo[1][2],hi[1][2],t)]; }
+    }
+    return STOPS[STOPS.length-1][1];
+  }
+  function rgb(c,a){ return a==null ? "rgb("+c[0]+","+c[1]+","+c[2]+")" : "rgba("+c[0]+","+c[1]+","+c[2]+","+a+")"; }
+
+  var FELT = [
+    "Empty. Please be gentle — rest is not a reward, it's a need.",
+    "Nearly out. This is the moment to stop and tend to yourself.",
+    "Very low. You've given a lot. Turn toward yourself now.",
+    "Running low. Time to tend to yourself, not the to-do list.",
+    "Getting low. Worth slowing down before you dip further.",
+    "Some in reserve. Notice what you need before it's urgent.",
+    "Steady. There's room here — and room to protect it.",
+    "Steady. You have enough for what matters.",
+    "Full-ish. Plenty of yourself to go around today.",
+    "Nearly full. A good, resourced day.",
+    "Full. You have plenty of yourself today."
+  ];
+
+  var DRAINS = ["Over-preparing","Suppressing what I feel","Over-thinking / self-monitoring","Masking","Too many things on my list","An unexpected stressor","Saying yes when I meant no","Carrying someone else's feelings"];
+  var RESTOCKS = ["Quiet time","Set a boundary","A 15-minute walk outside","Time with a friend or pet","Listening to music","Drinking water"];
+  var ANCHORS = ["Morning coffee","Midday / lunch","Afternoon reset","Evening wind-down","Getting into bed"];
+  var DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var DOW_FULL = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+  var $ = function (id){ return document.getElementById(id); };
+
+  // ---------- persistence ----------
+  var KEY = "enough.v1";
+  function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
+  function persist(){ try { localStorage.setItem(KEY, JSON.stringify(db)); } catch(e){} }
+  var db = load();
+  if (!db.days) db.days = {};
+  if (!db.settings) db.settings = { anchors:{}, schedChime:false, sound:false };
+  if (!db.settings.anchors) db.settings.anchors = {};
+
+  function dateKey(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  var now = new Date();
+  var today = dateKey(now);
+  function rec(){ return db.days[today]; }
+
+  var level = 10;
+  var soundOn = !!db.settings.sound;
+  var audio = null;
+
+  // ---------- build beans ----------
+  function buildBeans(groupEl){
+    POS.forEach(function (p){
+      var g = document.createElementNS("http://www.w3.org/2000/svg","g");
+      g.setAttribute("transform","translate("+p.x+","+p.y+") rotate("+p.r+")");
+      var body = document.createElementNS("http://www.w3.org/2000/svg","ellipse");
+      body.setAttribute("class","bean-body"); body.setAttribute("rx","17"); body.setAttribute("ry","10.5");
+      var belly = document.createElementNS("http://www.w3.org/2000/svg","ellipse");
+      belly.setAttribute("class","bean-belly"); belly.setAttribute("cx","-3.5"); belly.setAttribute("cy","-2.6");
+      belly.setAttribute("rx","8.5"); belly.setAttribute("ry","4"); belly.setAttribute("fill","rgba(255,255,255,0.28)");
+      g.appendChild(body); g.appendChild(belly); groupEl.appendChild(g);
+    });
+    return { bodies: groupEl.querySelectorAll(".bean-body"), bellies: groupEl.querySelectorAll(".bean-belly") };
+  }
+  var beanSets = [ buildBeans($("beans")), buildBeans($("beans2")) ];
+
+  // ---------- render ----------
+  var phone = $("phone");
+  function render(){
+    var c = stateColor(level), css = rgb(c);
+    phone.style.setProperty("--state", css);
+    var warmth = level<=3 ? 0.14 : (level>=8 ? 0.03 : 0.06);
+    phone.style.background = "linear-gradient(180deg, "+rgb([241,243,236])+", "+rgb(c,warmth)+")";
+
+    beanSets.forEach(function (set,s){
+      var emptyStroke = s===0 ? "rgba(52,56,45,0.16)" : "rgba(255,255,255,0.22)";
+      set.bodies.forEach(function (el,i){
+        if (i<level){ el.setAttribute("fill",css); el.removeAttribute("stroke"); el.style.opacity=1; }
+        else { el.setAttribute("fill","none"); el.setAttribute("stroke",emptyStroke); el.setAttribute("stroke-width","1.2"); el.style.opacity=0.55; }
+      });
+      set.bellies.forEach(function (el,i){ el.style.opacity = i<level ? 1 : 0; });
+    });
+
+    $("countNum").textContent = level;
+    $("countWord").textContent = level===1 ? "bean of ten" : "beans of ten";
+    $("felt").textContent = FELT[level];
+    $("lsNum").textContent = level;
+    $("lsPhrase").textContent = FELT[level];
+
+    $("slider").style.setProperty("--fill", (level/10*100)+"%");
+    if (+$("slider").value !== level) $("slider").value = level;
+    $("low").hidden = level > 3;
+    updateReflect();
+  }
+
+  // ---------- directional reflection ----------
+  function suggestionList(){
+    var t = {};
+    Object.keys(db.days).forEach(function (k){ (db.days[k].restocks||[]).forEach(function (l){ t[l] = (t[l]||0)+1; }); });
+    var arr = Object.keys(t).sort(function (a,b){ return t[b]-t[a]; });
+    ["A 15-minute walk outside","Quiet time","Drinking water"].forEach(function (l){ if (arr.indexOf(l)<0) arr.push(l); });
+    return arr.slice(0, 4);
+  }
+  function buildSuggestions(){
+    var host = $("suggestChips"); if (!host) return;
+    host.innerHTML = "";
+    suggestionList().forEach(function (l){ var s = document.createElement("span"); s.className = "suggest-chip"; s.textContent = l; host.appendChild(s); });
+  }
+  function updateReflect(){
+    var r = rec();
+    var dir = r ? (level < r.start ? -1 : (level > r.start ? 1 : 0)) : 0;
+    $("grpDrains").hidden = dir >= 0;
+    $("grpRestocks").hidden = dir <= 0;
+    if (dir < 0){
+      $("reflectTitle").textContent = "Lighter than you began.";
+      $("reflectSub").textContent = "What drew from your beans today? Noticing gently — there's nothing to fix.";
+    } else if (dir > 0){
+      $("reflectTitle").textContent = "Fuller than you began.";
+      $("reflectSub").textContent = "What lifted them? Naming it teaches Enough what tends to fill you.";
+    } else {
+      $("reflectTitle").textContent = "How is your day?";
+      $("reflectSub").textContent = "Anything you'd like to notice? None of this moves your beans — it's just for you.";
+    }
+
+    // recharge invitation whenever you're at or below six
+    var recharge = level <= 6;
+    $("suggest").hidden = !recharge;
+    if (recharge){
+      if (level <= 3){
+        $("suggestTitle").textContent = "When you're ready, something to fill you.";
+        $("suggestLead").textContent = "No rush, and nothing to force. Even one small thing counts.";
+      } else {
+        $("suggestTitle").textContent = "It may be time to recharge.";
+        $("suggestLead").textContent = "Your beans are getting low. Do one small thing that fills you back up — consider this your permission.";
+      }
+    }
+  }
+
+  function setLevel(next, chime){
+    next = Math.max(0, Math.min(10, Math.round(next)));
+    var crossedLow = next<=3 && level>3;
+    level = next;
+    if (rec()){ rec().beans = level; rec().updated = Date.now(); persist(); }
+    render();
+    if (chime && soundOn) playBell(crossedLow ? 0.9 : 0.5);
+  }
+
+  var slider = $("slider");
+  slider.addEventListener("input", function (){
+    var v = +slider.value, crossedLow = v<=3 && level>3;
+    level = v;
+    if (rec()){ rec().beans = level; rec().updated = Date.now(); persist(); }
+    render();
+    if (crossedLow && soundOn) playBell(0.9);
+  });
+
+  // ---------- tabs ----------
+  function show(which){
+    var t = which==="today";
+    $("view-today").hidden = !t;
+    $("view-patterns").hidden = t;
+    $("tab-today").setAttribute("aria-selected", t);
+    $("tab-patterns").setAttribute("aria-selected", !t);
+    if (!t) drawPatterns();
+  }
+  $("tab-today").addEventListener("click", function (){ show("today"); });
+  $("tab-patterns").addEventListener("click", function (){ show("patterns"); });
+
+  // ---------- check-in ----------
+  function partOfDay(){ var h = now.getHours(); return h < 12 ? "morning" : (h < 18 ? "afternoon" : "evening"); }
+  function greeting(){ var p = partOfDay(); return p === "morning" ? "Good&nbsp;morning." : (p === "afternoon" ? "Good&nbsp;afternoon." : "Good&nbsp;evening."); }
+  var CHECKIN_LABELS = {
+    morning: ["Rested and clear", "Okay — decent enough", "Tired. A rough night.", "Running on empty"],
+    day:     ["Full and clear", "Okay — decent enough", "Worn down — it's been a lot", "Running on empty"]
+  };
+  function showCheckin(){
+    var morning = partOfDay() === "morning";
+    $("ciGreeting").innerHTML = greeting();
+    $("ciAsk").textContent = morning
+      ? "Before the day asks anything of you — how rested do you feel?"
+      : "However your day has gone so far — how are you arriving right now?";
+    var labels = morning ? CHECKIN_LABELS.morning : CHECKIN_LABELS.day;
+    $("opts").querySelectorAll(".opt-btn .lbl").forEach(function (el, i){ el.textContent = labels[i]; });
+    $("checkin").hidden = false; $("checkin").style.opacity = 1;
+  }
+  $("opts").addEventListener("click", function (e){
+    var btn = e.target.closest(".opt-btn");
+    if (!btn) return;
+    var n = +btn.dataset.beans;
+    if (!db.days[today]) db.days[today] = { start:n, beans:n, fatigue:btn.dataset.fatigue, journal:"", drains:[], restocks:[], updated:Date.now() };
+    else { db.days[today].start = n; db.days[today].beans = n; db.days[today].fatigue = btn.dataset.fatigue; db.days[today].updated = Date.now(); }
+    persist();
+    level = n; render(); restoreToday();
+    var ci = $("checkin"); ci.style.opacity = 0;
+    setTimeout(function (){ ci.hidden = true; ci.style.opacity = 1; toast("You're starting today with "+n+(n===1?" bean.":" beans.")); }, 640);
+  });
+  $("newDay").addEventListener("click", function (){ show("today"); showCheckin(); });
+
+  // ---------- welcome (first-ever open) ----------
+  function showWelcome(){ $("welcome").hidden = false; $("welcome").style.opacity = 1; }
+  $("beginBtn").addEventListener("click", function (){
+    db.settings.welcomed = true; persist();
+    var w = $("welcome"); w.style.opacity = 0;
+    setTimeout(function (){ w.hidden = true; w.style.opacity = 1; enterDay(); }, 500);
+  });
+
+  // ---------- journal + chips ----------
+  var journal = $("journal");
+  var jTimer = null;
+  journal.addEventListener("input", function (){
+    clearTimeout(jTimer);
+    jTimer = setTimeout(function (){ if (rec()){ rec().journal = journal.value; persist(); } }, 400);
+  });
+
+  function noteToast(kind){
+    if (kind==="restock"){ toast("That counts. Well done, tending to yourself."); return; }
+    var n = $("drains").querySelectorAll('[aria-pressed="true"]').length;
+    toast(n>1 ? "That's "+n+" things drawing from you. Be extra gentle today." : "Noticed — gently. There's nothing here to fix.");
+  }
+  function makeChips(list, host, cls){
+    list.forEach(function (label){
+      var b = document.createElement("button");
+      b.className = "chip "+cls; b.type = "button"; b.textContent = label; b.setAttribute("aria-pressed","false");
+      b.addEventListener("click", function (){
+        var nowOn = b.getAttribute("aria-pressed") !== "true";
+        b.setAttribute("aria-pressed", nowOn?"true":"false");
+        b.classList.toggle("on", nowOn);
+        if (rec()){
+          var arr = cls==="drain" ? rec().drains : rec().restocks;
+          var idx = arr.indexOf(label);
+          if (nowOn && idx<0) arr.push(label);
+          if (!nowOn && idx>=0) arr.splice(idx,1);
+          persist();
+          if (cls === "restock") buildSuggestions();
+        }
+        if (nowOn) noteToast(cls);
+      });
+      host.appendChild(b);
+    });
+  }
+  makeChips(DRAINS, $("drains"), "drain");
+  makeChips(RESTOCKS, $("restocks"), "restock");
+
+  // reflect today's saved journal + chips into the UI
+  function restoreToday(){
+    var r = rec() || { journal:"", drains:[], restocks:[] };
+    journal.value = r.journal || "";
+    $("drains").querySelectorAll(".chip").forEach(function (c){
+      var on = (r.drains||[]).indexOf(c.textContent) >= 0;
+      c.setAttribute("aria-pressed", on?"true":"false"); c.classList.toggle("on", on);
+    });
+    $("restocks").querySelectorAll(".chip").forEach(function (c){
+      var on = (r.restocks||[]).indexOf(c.textContent) >= 0;
+      c.setAttribute("aria-pressed", on?"true":"false"); c.classList.toggle("on", on);
+    });
+    buildSuggestions();
+    updateReflect();
+  }
+
+  // ---------- schedule ----------
+  var anchorsHost = $("anchors");
+  ANCHORS.forEach(function (label){
+    var b = document.createElement("button");
+    b.className = "chip toggle"; b.type = "button"; b.textContent = label;
+    var on = !!db.settings.anchors[label];
+    b.setAttribute("aria-pressed", on?"true":"false");
+    b.addEventListener("click", function (){
+      var nowOn = b.getAttribute("aria-pressed") !== "true";
+      b.setAttribute("aria-pressed", nowOn?"true":"false");
+      db.settings.anchors[label] = nowOn; persist();
+    });
+    anchorsHost.appendChild(b);
+  });
+  var schedChime = $("schedChime");
+  schedChime.setAttribute("aria-pressed", db.settings.schedChime ? "true":"false");
+  function chimeArmed(){ return soundOn || schedChime.getAttribute("aria-pressed")==="true"; }
+  schedChime.addEventListener("click", function (){
+    var on = schedChime.getAttribute("aria-pressed")==="true";
+    schedChime.setAttribute("aria-pressed", on?"false":"true");
+    db.settings.schedChime = !on; persist();
+    if (!on){ ensureAudio(); playBell(0.5); }
+  });
+
+  // ---------- sound ----------
+  var sbtn = $("soundBtn");
+  function reflectSound(){ sbtn.setAttribute("aria-pressed", soundOn); sbtn.setAttribute("aria-label","Soft chime: "+(soundOn?"on":"off")); }
+  sbtn.addEventListener("click", function (){
+    soundOn = !soundOn; db.settings.sound = soundOn; persist(); reflectSound();
+    if (soundOn) playBell(0.5);
+  });
+  $("bellBtn").addEventListener("click", function (){ ensureAudio(); playBell(1); });
+
+  function ensureAudio(){
+    if (!audio){ try { audio = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){ audio = null; } }
+    if (audio && audio.state==="suspended") audio.resume();
+  }
+  function playBell(strength){
+    ensureAudio(); if (!audio) return;
+    var t0 = audio.currentTime, freqs = [392.0, 587.33];
+    var master = audio.createGain(); master.gain.value = 0.0001; master.connect(audio.destination);
+    master.gain.setValueAtTime(0.0001, t0);
+    master.gain.exponentialRampToValueAtTime(0.16*(strength||0.6), t0+0.04);
+    master.gain.exponentialRampToValueAtTime(0.0001, t0+2.8);
+    freqs.forEach(function (f,i){
+      var o = audio.createOscillator(); o.type = "sine"; o.frequency.value = f;
+      var g = audio.createGain(); g.gain.value = i===0?1:0.5;
+      o.connect(g); g.connect(master); o.start(t0+i*0.06); o.stop(t0+3);
+    });
+  }
+
+  // ---------- lock screen ----------
+  var lock = $("lockscreen"), lsWidget = $("lsWidget");
+  function stampClock(){
+    var h = now.getHours(), m = now.getMinutes();
+    var hh = (h%12)||12, mm = String(m).padStart(2,"0");
+    $("lsTime").textContent = hh+":"+mm;
+    $("lsDate").textContent = DOW_FULL[now.getDay()]+", "+MONTHS[now.getMonth()]+" "+now.getDate();
+  }
+  $("previewLock").addEventListener("click", function (){ stampClock(); lock.hidden = false; });
+  $("lsClose").addEventListener("click", function (){ lock.hidden = true; lsWidget.classList.remove("due"); });
+  $("lsDue").addEventListener("click", function (){ var due = lsWidget.classList.toggle("due"); if (due && chimeArmed()){ ensureAudio(); playBell(0.6); } });
+  $("lsMinus").addEventListener("click", function (){ setLevel(level-1, true); });
+  $("lsPlus").addEventListener("click", function (){ setLevel(level+1, true); });
+
+  // ---------- toast ----------
+  var toastEl = $("toast"), toastT = null;
+  function toast(msg){ toastEl.textContent = msg; toastEl.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(function (){ toastEl.classList.remove("show"); }, 2600); }
+
+  // ---------- patterns (real data) ----------
+  function historyDays(n){
+    var arr = [];
+    for (var i=n-1;i>=0;i--){
+      var d = new Date(now.getFullYear(), now.getMonth(), now.getDate()-i);
+      var k = dateKey(d);
+      arr.push({ key:k, date:d, rec: db.days[k] || null });
+    }
+    return arr;
+  }
+  function tally(field){
+    var counts = {};
+    Object.keys(db.days).forEach(function (k){
+      (db.days[k][field]||[]).forEach(function (label){ counts[label] = (counts[label]||0)+1; });
+    });
+    var best = null, n = 0;
+    Object.keys(counts).forEach(function (l){ if (counts[l]>n){ n = counts[l]; best = l; } });
+    return best ? { label:best, count:n } : null;
+  }
+  function drawPatterns(){
+    var body = $("p-body");
+    body.innerHTML = "";
+    var week = historyDays(7);
+    var withData = week.filter(function (d){ return d.rec; });
+    var totalTracked = Object.keys(db.days).length;
+
+    if (withData.length < 2){
+      var em = document.createElement("div");
+      em.className = "p-empty";
+      em.innerHTML = "<div class='em'>Your patterns are still gathering.</div>" +
+        "<p>Check in for a few days and this space will quietly fill with what your week has been telling you. Nothing to do — just keep tending your beans.</p>";
+      body.appendChild(em);
+      return;
+    }
+
+    // chart
+    var W=300,H=130,padX=8,padTop=12,padBot=16, iw=W-padX*2, ih=H-padTop-padBot;
+    var svgNS = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(svgNS,"svg");
+    svg.setAttribute("class","weekchart"); svg.setAttribute("viewBox","0 0 "+W+" "+H);
+    svg.setAttribute("aria-label","Your beans across the last seven days");
+
+    var lowY = padTop + ih*(1-3/10);
+    var thr = document.createElementNS(svgNS,"line");
+    thr.setAttribute("x1",padX); thr.setAttribute("x2",W-padX); thr.setAttribute("y1",lowY); thr.setAttribute("y2",lowY);
+    thr.setAttribute("stroke","rgba(169,78,56,0.35)"); thr.setAttribute("stroke-width","1"); thr.setAttribute("stroke-dasharray","3 4");
+    svg.appendChild(thr);
+
+    var pts = week.map(function (d,i){
+      var x = padX + iw*i/6;
+      var y = d.rec ? padTop + ih*(1 - d.rec.beans/10) : null;
+      return { x:x, y:y, rec:d.rec, date:d.date };
+    });
+    var linePts = pts.filter(function (p){ return p.y!=null; });
+    if (linePts.length >= 2){
+      var d = "M" + linePts.map(function (p){ return p.x.toFixed(1)+","+p.y.toFixed(1); }).join(" L");
+      var area = document.createElementNS(svgNS,"path");
+      area.setAttribute("d", d + " L"+linePts[linePts.length-1].x.toFixed(1)+","+(H-padBot)+" L"+linePts[0].x.toFixed(1)+","+(H-padBot)+" Z");
+      area.setAttribute("fill","rgba(110,129,99,0.14)"); svg.appendChild(area);
+      var line = document.createElementNS(svgNS,"path");
+      line.setAttribute("d", d); line.setAttribute("fill","none"); line.setAttribute("stroke","rgb(110,129,99)");
+      line.setAttribute("stroke-width","2"); line.setAttribute("stroke-linejoin","round"); line.setAttribute("stroke-linecap","round");
+      svg.appendChild(line);
+    }
+    pts.forEach(function (p){
+      if (p.y==null) return;
+      var c = document.createElementNS(svgNS,"circle");
+      c.setAttribute("cx",p.x); c.setAttribute("cy",p.y); c.setAttribute("r","3.5");
+      var col = stateColor(p.rec.beans);
+      c.setAttribute("fill","rgb("+col[0]+","+col[1]+","+col[2]+")"); c.setAttribute("stroke","#F1F3EC"); c.setAttribute("stroke-width","1.5");
+      svg.appendChild(c);
+    });
+    body.appendChild(svg);
+
+    var labels = document.createElement("div");
+    labels.className = "daylabels";
+    week.forEach(function (d){ var s = document.createElement("span"); s.textContent = DOW[d.date.getDay()]; labels.appendChild(s); });
+    body.appendChild(labels);
+
+    // noticing cards, only what the data actually supports
+    var notice = document.createElement("div"); notice.className = "notice";
+    function card(title, text){ var el = document.createElement("div"); el.className="card"; el.innerHTML = "<b></b><p></p>"; el.querySelector("b").textContent = title; el.querySelector("p").textContent = text; notice.appendChild(el); }
+
+    var lowest = withData.reduce(function (a,b){ return b.rec.beans < a.rec.beans ? b : a; });
+    var highest = withData.reduce(function (a,b){ return b.rec.beans > a.rec.beans ? b : a; });
+    if (lowest.rec.beans <= 4){
+      card(DOW_FULL[lowest.date.getDay()]+" ran lowest.", "You dipped to "+lowest.rec.beans+" bean"+(lowest.rec.beans===1?"":"s")+" that day. Worth knowing — maybe a day to promise less next time.");
+    } else {
+      card("A fairly steady week.", "Your beans stayed above the low line all week. Notice what's been holding you up, and keep doing it.");
+    }
+    var topRestock = tally("restocks");
+    if (topRestock && topRestock.count >= 2){
+      card("What's been filling you.", "You've reached for “"+topRestock.label+"” "+topRestock.count+" times. It seems to help — let yourself have more of it.");
+    }
+    var topDrain = tally("drains");
+    if (topDrain && topDrain.count >= 2){
+      card("What keeps drawing from you.", "“"+topDrain.label+"” has come up "+topDrain.count+" times. No judgment — just notice how it tends to leave you.");
+    }
+    body.appendChild(notice);
+
+    var foot = document.createElement("p"); foot.className = "p-foot";
+    foot.textContent = "Built from your "+totalTracked+" day"+(totalTracked===1?"":"s")+" of check-ins. The more you tend, the more it notices.";
+    body.appendChild(foot);
+  }
+
+  // ---------- init ----------
+  function enterDay(){
+    if (!db.days[today]){ level = 10; render(); showCheckin(); }
+    else { level = db.days[today].beans; render(); restoreToday(); }
+  }
+
+  buildSuggestions();
+  reflectSound();
+  if (!db.settings.welcomed){
+    if (db.days[today]){ level = db.days[today].beans; render(); restoreToday(); }
+    else { level = 10; render(); }
+    showWelcome();
+  } else {
+    enterDay();
+  }
+
+  // ---------- daily reset: notice when a new day has begun ----------
+  function refreshDay(){
+    var d = new Date(), k = dateKey(d);
+    if (k !== today){
+      today = k; now = d;                 // roll over to the new day
+      if (!db.days[today]){ level = 10; render(); showCheckin(); }
+    }
+  }
+  document.addEventListener("visibilitychange", function (){ if (!document.hidden) refreshDay(); });
+  window.addEventListener("focus", refreshDay);
+
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load", function (){ navigator.serviceWorker.register("service-worker.js").catch(function (){}); });
+  }
+})();
+</script>
+</body>
+</html>
